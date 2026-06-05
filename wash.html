@@ -1,0 +1,1188 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <meta http-equiv="X-UA-Compatible" content="IE=edge">
+    <meta name="description" content="便携小洗衣机 - 在线模拟洗衣机，体验多种洗涤模式与音效">
+    <meta name="format-detection" content="telephone=no">
+    <meta name="theme-color" content="#1e88e5">
+    <title>便携小洗衣机</title>
+    <style>
+        * { box-sizing: border-box; margin: 0; padding: 0; }
+
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif;
+            background: #eceff1;
+            padding: 24px 0 48px;
+        }
+
+        h2 {
+            font-weight: normal;
+            font-size: 22px;
+            text-align: center;
+            color: #37474f;
+            margin-bottom: 6px;
+        }
+
+        .wrap {
+            margin: 0 auto;
+            width: 85%;
+            min-width: 260px;
+            max-width: 320px;
+        }
+
+        .start-panel {
+            text-align: center;
+            padding: 48px 16px;
+        }
+
+        .start-panel p {
+            color: #607d8b;
+            font-size: 14px;
+            margin-bottom: 20px;
+            line-height: 1.5;
+        }
+
+        .start-btn {
+            display: inline-flex;
+            align-items: center;
+            justify-content: center;
+            gap: 8px;
+            padding: 14px 32px;
+            border: none;
+            border-radius: 12px;
+            background: linear-gradient(180deg, #42a5f5, #1e88e5);
+            color: #fff;
+            font-size: 16px;
+            cursor: pointer;
+            box-shadow: 0 4px 12px rgba(30, 136, 229, 0.35);
+            -webkit-tap-highlight-color: transparent;
+        }
+
+        .start-btn:active {
+            transform: translateY(1px);
+            box-shadow: 0 2px 6px rgba(30, 136, 229, 0.3);
+        }
+
+        .washer.hidden,
+        .start-panel.hidden {
+            display: none;
+        }
+
+        /* 方形洗衣机机身 */
+        .washer {
+            position: relative;
+            width: 100%;
+            aspect-ratio: 1 / 1.15;
+            background: linear-gradient(165deg, #fafafa 0%, #cfd8dc 55%, #b0bec5 100%);
+            border: 1px solid #b0bec5;
+            border-radius: 14px;
+            box-shadow: rgba(0,0,0,0.22) 0 6px 12px -4px,
+                        rgba(0,0,0,0.14) 0 4px 8px 0,
+                        inset 0 1px 0 rgba(255,255,255,0.6);
+            overflow: hidden;
+        }
+
+        /* 顶部控制面板 */
+        .control-panel {
+            position: absolute;
+            top: 0;
+            left: 0;
+            right: 0;
+            height: 38%;
+            background: linear-gradient(180deg, #eceff1, #dfe6e9);
+            border-bottom: 2px solid #b0bec5;
+            padding: 12px 14px 10px;
+            display: grid;
+            grid-template-columns: 1fr auto auto;
+            grid-template-rows: auto 1fr;
+            gap: 8px 10px;
+            align-items: start;
+        }
+
+        /* 液晶屏 */
+        .screen {
+            grid-column: 1;
+            grid-row: 1 / 3;
+            align-self: stretch;
+            background: #1a237e;
+            border: 2px solid #3949ab;
+            border-radius: 6px;
+            padding: 8px 10px;
+            color: #7cb9ff;
+            font-family: "Courier New", Courier, monospace;
+            box-shadow: inset 0 2px 8px rgba(0,0,0,0.45);
+            cursor: pointer;
+            user-select: none;
+            display: flex;
+            flex-direction: column;
+            justify-content: space-between;
+            min-height: 88px;
+        }
+
+        .screen:active { opacity: 0.92; }
+
+        .screen .line1 {
+            font-size: 11px;
+            letter-spacing: 1px;
+            opacity: 0.75;
+        }
+
+        .screen .line2 {
+            font-size: 15px;
+            font-weight: bold;
+            white-space: nowrap;
+            overflow: hidden;
+            text-overflow: ellipsis;
+        }
+
+        .screen .line3 {
+            font-size: 22px;
+            font-variant-numeric: tabular-nums;
+        }
+
+        .screen .line3 small {
+            font-size: 12px;
+            font-weight: normal;
+        }
+
+        .screen .line4 {
+            font-size: 10px;
+            opacity: 0.65;
+        }
+
+        .screen.off .line2,
+        .screen.off .line3 { opacity: 0.7; }
+
+        .screen.on .line2,
+        .screen.on .line3 { color: #b3e5fc; }
+
+        /* +/- 按钮 */
+        .btn-group {
+            grid-column: 2 / 4;
+            grid-row: 1;
+            display: flex;
+            gap: 8px;
+        }
+
+        .ctrl-btn {
+            width: 40px;
+            height: 40px;
+            border: none;
+            border-radius: 8px;
+            background: linear-gradient(180deg, #eceff1, #b0bec5);
+            box-shadow: 0 2px 4px rgba(0,0,0,0.2), inset 0 1px 0 rgba(255,255,255,0.7);
+            cursor: pointer;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            -webkit-tap-highlight-color: transparent;
+        }
+
+        .ctrl-btn:active {
+            transform: translateY(1px);
+            box-shadow: 0 1px 2px rgba(0,0,0,0.2), inset 0 1px 3px rgba(0,0,0,0.15);
+        }
+
+        .ctrl-btn svg {
+            width: 22px;
+            height: 22px;
+            fill: #455a64;
+        }
+
+        /* 旋钮区域 */
+        .knob-area {
+            grid-column: 2 / 4;
+            grid-row: 2;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            position: relative;
+        }
+
+        .knob-wrap {
+            position: relative;
+            width: 72px;
+            height: 72px;
+            touch-action: none;
+        }
+
+        .knob-ring {
+            position: absolute;
+            inset: 0;
+            border-radius: 50%;
+            border: 2px solid #90a4ae;
+            background: conic-gradient(
+                from -90deg,
+                #cfd8dc 0deg 18deg, #b0bec5 18deg 36deg,
+                #cfd8dc 36deg 54deg, #b0bec5 54deg 72deg,
+                #cfd8dc 72deg 90deg, #b0bec5 90deg 108deg,
+                #cfd8dc 108deg 126deg, #b0bec5 126deg 144deg,
+                #cfd8dc 144deg 162deg, #b0bec5 162deg 180deg,
+                #cfd8dc 180deg 198deg, #b0bec5 198deg 216deg,
+                #cfd8dc 216deg 234deg, #b0bec5 234deg 252deg,
+                #cfd8dc 252deg 270deg, #b0bec5 270deg 288deg,
+                #cfd8dc 288deg 306deg, #b0bec5 306deg 324deg,
+                #cfd8dc 324deg 342deg, #b0bec5 342deg 360deg
+            );
+            box-shadow: inset 0 0 6px rgba(0,0,0,0.15);
+        }
+
+        .knob-pointer {
+            position: absolute;
+            top: 6px;
+            left: 50%;
+            width: 3px;
+            height: 14px;
+            margin-left: -1.5px;
+            background: #e53935;
+            border-radius: 2px;
+            transform-origin: 50% 30px;
+            pointer-events: none;
+            z-index: 2;
+        }
+
+        .knob-cap {
+            position: absolute;
+            top: 50%;
+            left: 50%;
+            width: 44px;
+            height: 44px;
+            margin: -22px 0 0 -22px;
+            border-radius: 50%;
+            background: radial-gradient(circle at 35% 30%, #fff, #90a4ae);
+            border: 2px solid #78909c;
+            box-shadow: 0 2px 6px rgba(0,0,0,0.25);
+            cursor: grab;
+            z-index: 3;
+        }
+
+        .knob-cap:active { cursor: grabbing; }
+
+        /* 滚筒区域 */
+        .drum-section {
+            position: absolute;
+            left: 0;
+            right: 0;
+            top: 38%;
+            bottom: 0;
+            padding: 12px 16px 14px;
+            display: grid;
+            place-items: center;
+            container-type: size;
+        }
+
+        .door-frame {
+            aspect-ratio: 1 / 1;
+            width: min(100cqw, 100cqh);
+            height: min(100cqw, 100cqh);
+            flex-shrink: 0;
+            border-radius: 50%;
+            border: 10px solid #90a4ae;
+            background: #78909c;
+            box-shadow: inset 0 0 16px rgba(0,0,0,0.3), 0 4px 8px rgba(0,0,0,0.15);
+            overflow: hidden;
+            position: relative;
+        }
+
+        @supports not (width: 1cqw) {
+            .drum-section {
+                container-type: normal;
+            }
+
+            .door-frame {
+                height: 100%;
+                width: auto;
+                max-width: 100%;
+            }
+        }
+
+        .drum-inner {
+            position: absolute;
+            inset: 8px;
+            border-radius: 50%;
+            background: repeating-conic-gradient(
+                from 0deg,
+                #b0bec5 0deg 12deg,
+                #90a4ae 12deg 24deg
+            );
+            overflow: hidden;
+            z-index: 0;
+        }
+
+        .washer.on .drum-inner {
+            animation: spin 2.5s linear infinite;
+        }
+
+        .drum-inner .clothes-layer {
+            z-index: 1;
+        }
+
+        @keyframes spin {
+            from { transform: rotate(0deg); }
+            to { transform: rotate(360deg); }
+        }
+
+        /* 滚筒内水泡（独立于 drum-inner，不随滚筒背景旋转） */
+        .bubble-layer {
+            position: absolute;
+            inset: 8px;
+            border-radius: 50%;
+            overflow: hidden;
+            pointer-events: none;
+            opacity: 0;
+            transition: opacity 0.6s;
+            z-index: 1;
+        }
+
+        .washer.on .bubble-layer { opacity: 1; }
+
+        .bubble-layer span {
+            position: absolute;
+            border-radius: 50%;
+            background: radial-gradient(circle at 30% 30%, rgba(255,255,255,0.9), rgba(179,229,252,0.5));
+            border: 1px solid rgba(255,255,255,0.6);
+            animation: bubble-rise var(--dur, 2s) ease-in-out forwards;
+            transition: opacity 0.12s ease-out;
+        }
+
+        .bubble-layer span.vanish { opacity: 0 !important; animation: none !important; }
+
+        @keyframes bubble-rise {
+            0%   { transform: translate(-50%, -50%) rotate(var(--r0, 0deg)) scale(0.8); opacity: 0; }
+            20%  { opacity: 0.85; }
+            80%  { opacity: 0.6; }
+            100% { transform: translate(-50%, calc(-50% + var(--rise, -80px))) rotate(var(--r1, 360deg)) scale(1.1); opacity: 0; }
+        }
+
+        /* 滚筒内衣物（随 drum-inner 旋转） */
+        .clothes-layer {
+            position: absolute;
+            inset: 0;
+            border-radius: 50%;
+            overflow: hidden;
+            pointer-events: none;
+            opacity: 0;
+            transition: opacity 0.6s;
+            --cloth-scale: 1.45;
+        }
+
+        .washer.on.mode-clothes .clothes-layer { opacity: 1; }
+
+        .cloth {
+            position: absolute;
+            width: 26px;
+            height: 26px;
+            animation: cloth-tumble var(--dur, 2.4s) ease-in-out forwards;
+            transition: opacity 0.12s ease-out;
+        }
+
+        .cloth svg { width: 100%; height: 100%; display: block; }
+
+        .cloth.vanish { opacity: 0 !important; animation: none !important; }
+
+        .cloth[hidden] { display: none; }
+
+        @keyframes cloth-tumble {
+            0% {
+                transform: translate(-50%, -50%) rotate(var(--a0, 0deg)) translateX(var(--orbit, 60px)) rotate(var(--r0, 0deg)) scale(calc(0.75 * var(--cloth-scale, 1.45)));
+                opacity: 0;
+            }
+            18% { opacity: 0.95; }
+            82% { opacity: 0.75; }
+            100% {
+                transform: translate(-50%, -50%) rotate(var(--a1, 180deg)) translateX(var(--orbit, 60px)) rotate(var(--r1, 360deg)) scale(var(--cloth-scale, 1.45));
+                opacity: 0;
+            }
+        }
+
+        .door-glass {
+            position: absolute;
+            inset: 0;
+            border-radius: 50%;
+            background: radial-gradient(circle at 28% 22%, rgba(255,255,255,0.45) 0%, transparent 45%);
+            pointer-events: none;
+            z-index: 3;
+        }
+
+        .door-handle {
+            position: absolute;
+            right: -2px;
+            top: 50%;
+            transform: translateY(-50%);
+            width: 14px;
+            height: 36px;
+            background: linear-gradient(90deg, #b0bec5, #eceff1);
+            border: 1px solid #90a4ae;
+            border-radius: 0 6px 6px 0;
+            z-index: 4;
+        }
+
+        .status-led {
+            position: absolute;
+            right: 14px;
+            bottom: 14px;
+            width: 6px;
+            height: 6px;
+            border-radius: 50%;
+            background: #cfd8dc;
+            transition: background 0.3s, box-shadow 0.3s;
+        }
+
+        .status-led.on {
+            background: #00e676;
+            box-shadow: 0 0 8px #00e676;
+        }
+
+    </style>
+</head>
+<body>
+    <h2>便携小洗衣机</h2>
+
+    <div class="wrap">
+        <div class="start-panel" id="startPanel">
+            <p>浏览器需要您先点击按钮<br>才能播放洗衣机音效</p>
+            <button class="start-btn" id="startBtn" type="button">开启洗衣机</button>
+        </div>
+
+        <div class="washer hidden" id="washer">
+            <div class="control-panel">
+                <div class="screen off" id="screen" title="点击启动/停止">
+                    <div class="line1" id="scrBrand">MINI WASH</div>
+                    <div class="line2" id="scrMode">标准洗</div>
+                    <div class="line3" id="scrTime"><b>30</b><small> min</small></div>
+                    <div class="line4" id="scrStatus">待机</div>
+                </div>
+                <div class="btn-group">
+                    <button class="ctrl-btn" id="btnPlus" title="增加时间" aria-label="增加时间">
+                        <svg viewBox="0 0 24 24"><path d="M12 8l-6 6 1.41 1.41L12 10.83l4.59 4.58L18 14z"/></svg>
+                    </button>
+                    <button class="ctrl-btn" id="btnMinus" title="减少时间" aria-label="减少时间">
+                        <svg viewBox="0 0 24 24"><path d="M16.59 8.59L12 13.17 7.41 8.59 6 10l6 6 6-6z"/></svg>
+                    </button>
+                </div>
+                <div class="knob-area">
+                    <div class="knob-wrap" id="knobWrap">
+                        <div class="knob-ring"></div>
+                        <div class="knob-pointer" id="knobPointer"></div>
+                        <div class="knob-cap" id="knobCap"></div>
+                    </div>
+                </div>
+            </div>
+
+            <div class="drum-section">
+                <div class="door-frame">
+                    <div class="drum-inner">
+                        <div class="clothes-layer" id="clothesLayer">
+                            <span class="cloth" hidden></span>
+                            <span class="cloth" hidden></span>
+                            <span class="cloth" hidden></span>
+                            <span class="cloth" hidden></span>
+                            <span class="cloth" hidden></span>
+                            <span class="cloth" hidden></span>
+                            <span class="cloth" hidden></span>
+                            <span class="cloth" hidden></span>
+                            <span class="cloth" hidden></span>
+                            <span class="cloth" hidden></span>
+                        </div>
+                    </div>
+                    <div class="bubble-layer" id="bubbles"></div>
+                    <div class="door-glass"></div>
+                    <div class="door-handle"></div>
+                </div>
+            </div>
+
+            <i class="status-led" id="statusLed"></i>
+        </div>
+
+    </div>
+
+    <script>
+            var MODES = [
+                { name: "棉麻",   min: 45, max: 90, def: 60, clothes: ["linen", "flannel", "pants", "towel", "shirt", "tablecloth", "camisole", "sheet"] },
+                { name: "化纤",   min: 30, max: 60, def: 40, clothes: ["synth", "sport", "mesh", "leggings", "stocking", "windbreaker", "sequin", "slip"] },
+                { name: "羊毛",   min: 20, max: 40, def: 30, clothes: ["sweater", "cardigan", "vestKnit", "turtleneck", "woolCoat", "fleece", "mitten", "woolScarf"] },
+                { name: "羽绒",   min: 30, max: 50, def: 40, clothes: ["down", "parka", "pufferVest", "cape", "blanket", "quilt", "pillowcase", "woolScarf"] },
+                { name: "快洗",   min: 15, max: 30, def: 20, clothes: "all" },
+                { name: "强力",   min: 50, max: 90, def: 70, clothes: "all" },
+                { name: "轻柔",   min: 20, max: 45, def: 30, clothes: ["silk", "lace", "camisole", "slip", "robe", "headband", "stocking", "pajamas"] },
+                { name: "童装",   min: 25, max: 50, def: 35, clothes: ["onesie", "bib", "romper", "beanie", "headband", "mitten", "bowtie", "shirt"] },
+                { name: "内衣",   min: 20, max: 40, def: 25, clothes: ["underwear", "bra", "camisole", "boxers", "stocking", "slip", "robe", "pajamas"] },
+                { name: "牛仔",   min: 40, max: 70, def: 55, clothes: ["jeans", "denimJkt", "belt", "cargo", "overalls", "shirt", "shorts", "blazer"] },
+                { name: "消毒",   min: 60, max: 90, def: 75, clothes: "all" },
+                { name: "筒清洁", min: 90, max: 120, def: 95 },
+                { name: "漂洗",   min: 15, max: 30, def: 20 },
+                { name: "脱水",   min: 5,  max: 15, def: 10 },
+                { name: "混合",   min: 35, max: 65, def: 45, clothes: "all" },
+                { name: "丝绸",   min: 15, max: 35, def: 25, clothes: ["silk", "lace", "kimono", "slip", "camisole", "robe", "curtain", "sequin"] },
+                { name: "运动服", min: 30, max: 55, def: 40, clothes: ["sport", "mesh", "shorts", "leggings", "windbreaker", "tank", "sweatpants", "glove"] },
+                { name: "十五分钟", min: 15, max: 15, def: 15, clothes: "all" },
+                { name: "大件",   min: 60, max: 120, def: 80, clothes: ["sheet", "blanket", "quilt", "curtain", "tablecloth", "bathmat", "towel", "pillowcase"] },
+                { name: "自定义", min: 10, max: 120, def: 30, clothes: "all" }
+            ];
+
+            var MAX_DRUM_ITEMS = 10;
+            var MAX_BUBBLE_ITEMS = 18;
+
+            var CLOTH_SVGS = {
+                /* ── 上装 ×8 ── */
+                shirt: '<svg viewBox="0 0 24 24"><rect x="7" y="9" width="10" height="10" rx="1.5" fill="#5c6bc0"/><rect x="2" y="10" width="5" height="5" rx="1" fill="#5c6bc0"/><rect x="17" y="10" width="5" height="5" rx="1" fill="#5c6bc0"/><circle cx="12" cy="9" r="2.5" fill="#7986cb"/></svg>',
+                linen: '<svg viewBox="0 0 24 24"><rect x="7" y="9" width="10" height="10" rx="1" fill="#d7ccc8" stroke="#a1887f" stroke-width=".5"/><rect x="2" y="10" width="5" height="4" rx="1" fill="#bcaaa4"/><rect x="17" y="10" width="5" height="4" rx="1" fill="#bcaaa4"/><line x1="9" y1="13" x2="15" y2="13" stroke="#8d6e63" stroke-width=".8" opacity=".5"/></svg>',
+                synth: '<svg viewBox="0 0 24 24"><defs><linearGradient id="sy" x1="0" y1="0" x2="1" y2="1"><stop offset="0%" stop-color="#e1bee7"/><stop offset="100%" stop-color="#7b1fa2"/></linearGradient></defs><rect x="6" y="8" width="12" height="12" rx="2" fill="url(#sy)"/><path d="M8 10l4 6 4-6" fill="none" stroke="#fff" stroke-width="1" opacity=".6"/></svg>',
+                sport: '<svg viewBox="0 0 24 24"><rect x="7" y="8" width="10" height="12" rx="1" fill="#00897b"/><rect x="2" y="10" width="5" height="4" rx="1" fill="#00897b"/><rect x="17" y="10" width="5" height="4" rx="1" fill="#00897b"/><line x1="4" y1="20" x2="20" y2="8" stroke="#fff" stroke-width="2.5"/></svg>',
+                polo: '<svg viewBox="0 0 24 24"><rect x="7" y="10" width="10" height="9" rx="1" fill="#1565c0"/><path d="M12 6 L9 10 L12 12 L15 10 Z" fill="#fff"/><rect x="11" y="10" width="2" height="7" fill="#fff" opacity=".7"/><rect x="2" y="11" width="5" height="3" rx="1" fill="#1565c0"/><rect x="17" y="11" width="5" height="3" rx="1" fill="#1565c0"/></svg>',
+                tank: '<svg viewBox="0 0 24 24"><path d="M8 8 L6 10 L7 20 L17 20 L18 10 L16 8 Z" fill="#c62828"/><path d="M8 8 L12 11 L16 8" fill="none" stroke="#ef5350" stroke-width="1.2"/></svg>',
+                hoodie: '<svg viewBox="0 0 24 24"><path d="M6 12 Q12 4 18 12 L18 20 L6 20 Z" fill="#78909c"/><rect x="7" y="13" width="10" height="7" rx="1" fill="#607d8b"/><circle cx="12" cy="17" r="1" fill="#455a64"/></svg>',
+                flannel: '<svg viewBox="0 0 24 24"><rect x="5" y="8" width="14" height="12" rx="1" fill="#b71c1c"/><rect x="5" y="8" width="7" height="6" fill="#212121" opacity=".3"/><rect x="12" y="14" width="7" height="6" fill="#212121" opacity=".3"/><rect x="2" y="10" width="3" height="4" fill="#b71c1c"/><rect x="19" y="10" width="3" height="4" fill="#b71c1c"/></svg>',
+                /* ── 针织 ×8 ── */
+                sweater: '<svg viewBox="0 0 24 24"><rect x="5" y="9" width="14" height="11" rx="2" fill="#795548"/><line x1="5" y1="12" x2="19" y2="12" stroke="#a1887f" stroke-width="1"/><line x1="5" y1="15" x2="19" y2="15" stroke="#a1887f" stroke-width="1"/><line x1="5" y1="18" x2="19" y2="18" stroke="#a1887f" stroke-width="1"/><path d="M9 9 Q12 6 15 9" fill="none" stroke="#5d4037" stroke-width="1.5"/></svg>',
+                cardigan: '<svg viewBox="0 0 24 24"><rect x="5" y="8" width="6" height="13" rx="1" fill="#8d6e63"/><rect x="13" y="8" width="6" height="13" rx="1" fill="#8d6e63"/><circle cx="12" cy="11" r=".8" fill="#fff"/><circle cx="12" cy="14" r=".8" fill="#fff"/><circle cx="12" cy="17" r=".8" fill="#fff"/></svg>',
+                vestKnit: '<svg viewBox="0 0 24 24"><path d="M6 9 L9 20 L15 20 L18 9 Q12 13 6 9" fill="#6d4c41"/><line x1="8" y1="12" x2="16" y2="12" stroke="#a1887f" stroke-width=".8"/><line x1="8" y1="15" x2="16" y2="15" stroke="#a1887f" stroke-width=".8"/></svg>',
+                turtleneck: '<svg viewBox="0 0 24 24"><rect x="8" y="5" width="8" height="4" rx="2" fill="#37474f"/><rect x="6" y="9" width="12" height="11" rx="1" fill="#263238"/><rect x="2" y="11" width="4" height="4" rx="1" fill="#263238"/><rect x="18" y="11" width="4" height="4" rx="1" fill="#263238"/></svg>',
+                woolCoat: '<svg viewBox="0 0 24 24"><path d="M5 8 L4 21 L20 21 L19 8 Q12 5 5 8" fill="#a1887f"/><line x1="12" y1="8" x2="12" y2="21" stroke="#8d6e63" stroke-width="1"/><circle cx="12" cy="12" r="1" fill="#ffd54f"/></svg>',
+                fleece: '<svg viewBox="0 0 24 24"><rect x="5" y="9" width="14" height="11" rx="2" fill="#bdbdbd"/><line x1="12" y1="9" x2="12" y2="20" stroke="#757575" stroke-width="1.5"/><rect x="10" y="7" width="4" height="3" rx="1" fill="#9e9e9e"/></svg>',
+                mitten: '<svg viewBox="0 0 24 24"><path d="M4 14 Q4 8 8 8 L10 8 L10 6 Q12 4 14 6 L14 8 L16 8 Q20 8 20 14 L20 20 L4 20 Z" fill="#e53935"/><ellipse cx="8" cy="10" rx="2" ry="1.5" fill="#ef5350"/></svg>',
+                woolScarf: '<svg viewBox="0 0 24 24"><path d="M3 10 Q12 6 21 10 L21 14 Q12 18 3 14 Z" fill="#ff7043"/><line x1="5" y1="11" x2="19" y2="11" stroke="#fff" stroke-width="1" opacity=".5"/><line x1="5" y1="13" x2="19" y2="13" stroke="#fff" stroke-width="1" opacity=".5"/><path d="M16 14 L18 22 L14 22 Z" fill="#ff5722"/></svg>',
+                /* ── 外套 ×8 ── */
+                down: '<svg viewBox="0 0 24 24"><ellipse cx="12" cy="14" rx="9" ry="7" fill="#ff7043"/><line x1="4" y1="12" x2="20" y2="12" stroke="#e64a19" stroke-width=".8" opacity=".5"/><line x1="4" y1="15" x2="20" y2="15" stroke="#e64a19" stroke-width=".8" opacity=".5"/><line x1="4" y1="18" x2="20" y2="18" stroke="#e64a19" stroke-width=".8" opacity=".5"/></svg>',
+                parka: '<svg viewBox="0 0 24 24"><path d="M4 10 Q12 3 20 10 L20 21 L4 21 Z" fill="#2e7d32"/><ellipse cx="12" cy="8" rx="7" ry="3" fill="#81c784"/><line x1="12" y1="10" x2="12" y2="21" stroke="#1b5e20" stroke-width="1"/></svg>',
+                raincoat: '<svg viewBox="0 0 24 24"><path d="M5 9 L4 21 L20 21 L19 9 Q12 5 5 9" fill="#fdd835"/><path d="M8 9 L12 6 L16 9" fill="#f9a825"/><circle cx="12" cy="14" r="1" fill="#f57f17"/></svg>',
+                windbreaker: '<svg viewBox="0 0 24 24"><path d="M6 10 L5 20 L19 20 L18 10 Q12 7 6 10" fill="#00bcd4" opacity=".85"/><line x1="12" y1="10" x2="12" y2="20" stroke="#00838f" stroke-width="1"/><path d="M6 10 L12 13 L18 10" fill="none" stroke="#fff" stroke-width="1"/></svg>',
+                blazer: '<svg viewBox="0 0 24 24"><path d="M5 9 L4 21 L20 21 L19 9 Q12 6 5 9" fill="#1a237e"/><path d="M8 9 L12 13 L16 9" fill="#283593"/><circle cx="12" cy="15" r="1" fill="#ffd54f"/></svg>',
+                poncho: '<svg viewBox="0 0 24 24"><path d="M12 4 L2 20 L22 20 Z" fill="#ef6c00"/><circle cx="12" cy="8" r="2" fill="#ff9800"/><line x1="6" y1="16" x2="18" y2="16" stroke="#e65100" stroke-width="1" opacity=".4"/></svg>',
+                cape: '<svg viewBox="0 0 24 24"><path d="M12 5 Q2 12 4 22 L20 22 Q22 12 12 5" fill="#c62828"/><circle cx="12" cy="6" r="2" fill="#ffd54f"/></svg>',
+                pufferVest: '<svg viewBox="0 0 24 24"><path d="M6 10 Q12 7 18 10 L18 20 L6 20 Z" fill="#ff9800"/><line x1="6" y1="13" x2="18" y2="13" stroke="#e65100" stroke-width=".7"/><line x1="6" y1="16" x2="18" y2="16" stroke="#e65100" stroke-width=".7"/><path d="M6 10 L6 7 M18 10 L18 7" stroke="#ff9800" stroke-width="2"/></svg>',
+                /* ── 下装 ×8 ── */
+                pants: '<svg viewBox="0 0 24 24"><rect x="5" y="6" width="14" height="3" rx="1" fill="#455a64"/><rect x="5" y="9" width="6" height="12" rx="1" fill="#37474f"/><rect x="13" y="9" width="6" height="12" rx="1" fill="#37474f"/></svg>',
+                jeans: '<svg viewBox="0 0 24 24"><rect x="5" y="6" width="14" height="3" rx="1" fill="#283593"/><rect x="5" y="9" width="6" height="12" rx="1" fill="#1a237e"/><rect x="13" y="9" width="6" height="12" rx="1" fill="#1a237e"/><line x1="8" y1="9" x2="8" y2="14" stroke="#7986cb" stroke-width=".8" opacity=".6"/><line x1="16" y1="9" x2="16" y2="14" stroke="#7986cb" stroke-width=".8" opacity=".6"/></svg>',
+                shorts: '<svg viewBox="0 0 24 24"><rect x="5" y="8" width="14" height="3" rx="1" fill="#00695c"/><rect x="5" y="11" width="6" height="8" rx="1" fill="#00897b"/><rect x="13" y="11" width="6" height="8" rx="1" fill="#00897b"/></svg>',
+                skirt: '<svg viewBox="0 0 24 24"><rect x="8" y="7" width="8" height="2" rx="1" fill="#c62828"/><path d="M6 9 L4 21 L20 21 L18 9 Z" fill="#e53935"/></svg>',
+                leggings: '<svg viewBox="0 0 24 24"><rect x="7" y="6" width="10" height="2" rx="1" fill="#212121"/><rect x="7" y="8" width="4" height="13" rx="1.5" fill="#424242"/><rect x="13" y="8" width="4" height="13" rx="1.5" fill="#424242"/></svg>',
+                cargo: '<svg viewBox="0 0 24 24"><rect x="5" y="6" width="14" height="3" rx="1" fill="#827717"/><rect x="5" y="9" width="6" height="12" rx="1" fill="#9e9d24"/><rect x="13" y="9" width="6" height="12" rx="1" fill="#9e9d24"/><rect x="5" y="12" width="5" height="4" rx=".5" fill="#827717" stroke="#fff" stroke-width=".5"/><rect x="14" y="12" width="5" height="4" rx=".5" fill="#827717" stroke="#fff" stroke-width=".5"/></svg>',
+                sweatpants: '<svg viewBox="0 0 24 24"><rect x="5" y="6" width="14" height="3" rx="1" fill="#616161"/><rect x="5" y="9" width="6" height="9" rx="1" fill="#757575"/><rect x="13" y="9" width="6" height="9" rx="1" fill="#757575"/><rect x="5" y="18" width="6" height="2" rx="1" fill="#424242"/><rect x="13" y="18" width="6" height="2" rx="1" fill="#424242"/></svg>',
+                overalls: '<svg viewBox="0 0 24 24"><rect x="7" y="4" width="4" height="6" rx="1" fill="#1565c0"/><rect x="13" y="4" width="4" height="6" rx="1" fill="#1565c0"/><rect x="5" y="10" width="14" height="5" rx="1" fill="#1976d2"/><rect x="5" y="15" width="6" height="6" rx="1" fill="#1565c0"/><rect x="13" y="15" width="6" height="6" rx="1" fill="#1565c0"/></svg>',
+                /* ── 内衣 ×8 ── */
+                underwear: '<svg viewBox="0 0 24 24"><rect x="4" y="7" width="16" height="3" rx="1.5" fill="#ec407a"/><path d="M4 10 Q7 20 12 17 Q17 20 20 10 Z" fill="#f48fb1"/></svg>',
+                bra: '<svg viewBox="0 0 24 24"><path d="M2 10 Q6 6 12 10 Q18 6 22 10 L22 14 Q18 18 12 14 Q6 18 2 14 Z" fill="#9c27b0"/><line x1="12" y1="10" x2="12" y2="14" stroke="#7b1fa2" stroke-width="1"/></svg>',
+                camisole: '<svg viewBox="0 0 24 24"><path d="M8 5 L7 9 L7 20 L17 20 L17 9 L16 5" fill="none" stroke="#f06292" stroke-width="1.5"/><rect x="7" y="9" width="10" height="11" rx="1" fill="#f8bbd0"/></svg>',
+                pajamas: '<svg viewBox="0 0 24 24"><rect x="6" y="5" width="12" height="8" rx="1" fill="#5c6bc0"/><line x1="6" y1="8" x2="18" y2="8" stroke="#fff" stroke-width="1" opacity=".5"/><line x1="6" y1="11" x2="18" y2="11" stroke="#fff" stroke-width="1" opacity=".5"/><rect x="7" y="13" width="4" height="8" rx="1" fill="#3f51b5"/><rect x="13" y="13" width="4" height="8" rx="1" fill="#3f51b5"/></svg>',
+                robe: '<svg viewBox="0 0 24 24"><path d="M5 8 Q12 5 19 8 L19 21 L5 21 Z" fill="#7e57c2"/><line x1="12" y1="8" x2="12" y2="21" stroke="#5e35b1" stroke-width="1"/><rect x="9" y="14" width="6" height="2" rx="1" fill="#ffd54f"/></svg>',
+                slip: '<svg viewBox="0 0 24 24"><path d="M8 6 L7 10 L6 21 L18 21 L17 10 L16 6 Q12 9 8 6" fill="#fce4ec" stroke="#f48fb1" stroke-width=".8"/></svg>',
+                boxers: '<svg viewBox="0 0 24 24"><rect x="4" y="8" width="16" height="3" rx="1" fill="#1565c0"/><path d="M4 11 L6 20 L10 18 L12 20 L14 18 L18 20 L20 11 Z" fill="#42a5f5"/><rect x="6" y="12" width="4" height="3" fill="#1565c0" opacity=".3"/><rect x="14" y="12" width="4" height="3" fill="#1565c0" opacity=".3"/></svg>',
+                stocking: '<svg viewBox="0 0 24 24"><path d="M9 4 L8 8 L7 21 L13 21 L12 8 L11 4 Z" fill="#212121" opacity=".85"/><path d="M15 4 L14 8 L13 21 L19 21 L18 8 L17 4 Z" fill="#212121" opacity=".85"/><line x1="8" y1="12" x2="12" y2="12" stroke="#424242" stroke-width=".5"/></svg>',
+                /* ── 童配 ×8 ── */
+                onesie: '<svg viewBox="0 0 24 24"><path d="M8 6 Q12 3 16 6 L17 20 L7 20 Z" fill="#66bb6a"/><circle cx="10" cy="5" r="1.5" fill="#66bb6a"/><circle cx="14" cy="5" r="1.5" fill="#66bb6a"/><circle cx="12" cy="13" r="2" fill="#fff" opacity=".4"/></svg>',
+                bib: '<svg viewBox="0 0 24 24"><path d="M7 6 Q12 4 17 6 L18 16 Q12 20 6 16 Z" fill="#ffee58"/><circle cx="10" cy="11" r="1.5" fill="#f44336"/><circle cx="14" cy="11" r="1.5" fill="#2196f3"/><circle cx="12" cy="14" r="1.5" fill="#4caf50"/></svg>',
+                beanie: '<svg viewBox="0 0 24 24"><ellipse cx="12" cy="14" rx="8" ry="6" fill="#e53935"/><rect x="4" y="18" width="16" height="3" rx="1" fill="#c62828"/><circle cx="12" cy="7" r="2" fill="#ef5350"/></svg>',
+                tie: '<svg viewBox="0 0 24 24"><path d="M10 3 L14 3 L15 10 L12 21 L9 10 Z" fill="#1565c0"/><path d="M10 3 L14 3 L13 8 L11 8 Z" fill="#0d47a1"/><line x1="11" y1="12" x2="13" y2="12" stroke="#fff" stroke-width=".8" opacity=".4"/></svg>',
+                bowtie: '<svg viewBox="0 0 24 24"><path d="M12 10 L4 6 L4 14 Z" fill="#c62828"/><path d="M12 10 L20 6 L20 14 Z" fill="#c62828"/><circle cx="12" cy="10" r="2" fill="#e53935"/></svg>',
+                glove: '<svg viewBox="0 0 24 24"><path d="M8 10 L8 6 Q10 4 12 6 L12 8 L14 6 Q16 4 18 6 L18 10 Q18 14 14 14 L10 14 Q8 14 8 10" fill="#fdd835" stroke="#f9a825" stroke-width=".8"/><rect x="9" y="14" width="8" height="6" rx="2" fill="#fdd835"/></svg>',
+                headband: '<svg viewBox="0 0 24 24"><path d="M3 11 Q12 7 21 11 L21 14 Q12 18 3 14 Z" fill="#f48fb1"/><circle cx="12" cy="10" r="2" fill="#fff" opacity=".5"/></svg>',
+                romper: '<svg viewBox="0 0 24 24"><path d="M8 5 L7 9 L7 14 L17 14 L17 9 L16 5 Q12 8 8 5" fill="#ffca28"/><rect x="7" y="14" width="4" height="7" rx="1" fill="#ffb300"/><rect x="13" y="14" width="4" height="7" rx="1" fill="#ffb300"/></svg>',
+                /* ── 床品 ×8 ── */
+                towel: '<svg viewBox="0 0 24 24"><rect x="3" y="8" width="18" height="10" rx="2" fill="#ffab91"/><line x1="5" y1="11" x2="19" y2="11" stroke="#fff" stroke-width="1" opacity=".5"/><line x1="5" y1="14" x2="19" y2="14" stroke="#fff" stroke-width="1" opacity=".5"/><path d="M3 8 Q12 5 21 8" fill="none" stroke="#ff8a65" stroke-width="1"/></svg>',
+                sheet: '<svg viewBox="0 0 24 24"><rect x="2" y="7" width="20" height="13" rx="1" fill="#e3f2fd" stroke="#90caf9" stroke-width=".8"/><rect x="4" y="9" width="16" height="9" fill="none" stroke="#bbdefb" stroke-width=".5" stroke-dasharray="2 2"/></svg>',
+                blanket: '<svg viewBox="0 0 24 24"><rect x="3" y="9" width="18" height="10" rx="2" fill="#8d6e63"/><path d="M3 9 L8 7 L16 7 L21 9" fill="#a1887f"/><line x1="6" y1="12" x2="18" y2="12" stroke="#6d4c41" stroke-width=".8" opacity=".5"/></svg>',
+                pillowcase: '<svg viewBox="0 0 24 24"><rect x="3" y="9" width="18" height="10" rx="3" fill="#fafafa" stroke="#e0e0e0" stroke-width=".8"/><ellipse cx="8" cy="12" rx="3" ry="2" fill="#fff" opacity=".8"/><ellipse cx="16" cy="12" rx="3" ry="2" fill="#fff" opacity=".8"/></svg>',
+                quilt: '<svg viewBox="0 0 24 24"><rect x="3" y="7" width="18" height="12" rx="1" fill="#fff8e1"/><rect x="3" y="7" width="9" height="6" fill="#ffcc80"/><rect x="12" y="13" width="9" height="6" fill="#ffcc80"/><rect x="12" y="7" width="9" height="6" fill="#ffe0b2"/><rect x="3" y="13" width="9" height="6" fill="#ffe0b2"/></svg>',
+                curtain: '<svg viewBox="0 0 24 24"><rect x="2" y="4" width="20" height="2" rx="1" fill="#795548"/><path d="M3 6 Q5 20 7 20 L7 6" fill="#64b5f6" opacity=".8"/><path d="M10 6 Q12 20 14 20 L14 6" fill="#42a5f5" opacity=".8"/><path d="M17 6 Q19 20 21 20 L21 6" fill="#64b5f6" opacity=".8"/></svg>',
+                tablecloth: '<svg viewBox="0 0 24 24"><rect x="2" y="10" width="20" height="10" rx="1" fill="#fafafa" stroke="#e0e0e0" stroke-width=".8"/><path d="M2 10 Q12 6 22 10" fill="none" stroke="#bdbdbd" stroke-width="1"/><circle cx="6" cy="14" r="1" fill="#e0e0e0"/><circle cx="18" cy="14" r="1" fill="#e0e0e0"/></svg>',
+                bathmat: '<svg viewBox="0 0 24 24"><rect x="3" y="10" width="18" height="9" rx="2" fill="#66bb6a"/><line x1="5" y1="13" x2="19" y2="13" stroke="#388e3c" stroke-width=".5" opacity=".4"/><line x1="5" y1="16" x2="19" y2="16" stroke="#388e3c" stroke-width=".5" opacity=".4"/><line x1="8" y1="11" x2="8" y2="18" stroke="#388e3c" stroke-width=".5" opacity=".3"/><line x1="16" y1="11" x2="16" y2="18" stroke="#388e3c" stroke-width=".5" opacity=".3"/></svg>',
+                /* ── 特色 ×8 ── */
+                silk: '<svg viewBox="0 0 24 24"><path d="M2 12 Q8 8 12 12 Q16 16 22 12" fill="none" stroke="#f48fb1" stroke-width="3" stroke-linecap="round"/><path d="M2 14 Q8 10 12 14 Q16 18 22 14" fill="none" stroke="#fce4ec" stroke-width="2" stroke-linecap="round"/></svg>',
+                lace: '<svg viewBox="0 0 24 24"><rect x="5" y="7" width="14" height="12" rx="1" fill="#fce4ec" stroke="#f8bbd0" stroke-width=".8"/><circle cx="8" cy="10" r="1.5" fill="none" stroke="#f48fb1" stroke-width=".8"/><circle cx="12" cy="10" r="1.5" fill="none" stroke="#f48fb1" stroke-width=".8"/><circle cx="16" cy="10" r="1.5" fill="none" stroke="#f48fb1" stroke-width=".8"/><circle cx="10" cy="14" r="1.5" fill="none" stroke="#f48fb1" stroke-width=".8"/><circle cx="14" cy="14" r="1.5" fill="none" stroke="#f48fb1" stroke-width=".8"/><circle cx="12" cy="17" r="1.5" fill="none" stroke="#f48fb1" stroke-width=".8"/></svg>',
+                denimJkt: '<svg viewBox="0 0 24 24"><path d="M5 9 L4 21 L20 21 L19 9 Q12 6 5 9" fill="#1565c0"/><rect x="2" y="11" width="3" height="8" rx="1" fill="#1565c0"/><rect x="19" y="11" width="3" height="8" rx="1" fill="#1565c0"/><circle cx="12" cy="14" r="1" fill="#ffd54f"/><line x1="8" y1="9" x2="8" y2="14" stroke="#0d47a1" stroke-width=".8"/></svg>',
+                leatherJkt: '<svg viewBox="0 0 24 24"><path d="M5 9 L4 21 L20 21 L19 9 Q12 6 5 9" fill="#212121"/><path d="M8 9 L12 13 L16 9" fill="#424242"/><line x1="12" y1="13" x2="12" y2="21" stroke="#616161" stroke-width="1.5"/><circle cx="12" cy="16" r="1" fill="#ffd54f"/></svg>',
+                mesh: '<svg viewBox="0 0 24 24"><rect x="6" y="8" width="12" height="12" rx="1" fill="#43a047" opacity=".7"/><line x1="6" y1="11" x2="18" y2="11" stroke="#fff" stroke-width=".5"/><line x1="6" y1="14" x2="18" y2="14" stroke="#fff" stroke-width=".5"/><line x1="6" y1="17" x2="18" y2="17" stroke="#fff" stroke-width=".5"/><line x1="9" y1="8" x2="9" y2="20" stroke="#fff" stroke-width=".5"/><line x1="12" y1="8" x2="12" y2="20" stroke="#fff" stroke-width=".5"/><line x1="15" y1="8" x2="15" y2="20" stroke="#fff" stroke-width=".5"/></svg>',
+                sequin: '<svg viewBox="0 0 24 24"><rect x="6" y="8" width="12" height="12" rx="1" fill="#ffd54f"/><circle cx="9" cy="11" r="1" fill="#fff" opacity=".8"/><circle cx="13" cy="11" r="1" fill="#fff" opacity=".8"/><circle cx="17" cy="11" r="1" fill="#fff" opacity=".8"/><circle cx="11" cy="14" r="1" fill="#fff" opacity=".8"/><circle cx="15" cy="14" r="1" fill="#fff" opacity=".8"/><circle cx="9" cy="17" r="1" fill="#fff" opacity=".8"/><circle cx="13" cy="17" r="1" fill="#fff" opacity=".8"/><circle cx="17" cy="17" r="1" fill="#fff" opacity=".8"/></svg>',
+                kimono: '<svg viewBox="0 0 24 24"><path d="M12 5 L4 10 L4 21 L20 21 L20 10 Z" fill="#c62828"/><path d="M4 10 L12 14 L20 10" fill="#e53935"/><rect x="2" y="10" width="3" height="10" fill="#c62828"/><rect x="19" y="10" width="3" height="10" fill="#c62828"/><circle cx="12" cy="8" r="1.5" fill="#ffd54f"/></svg>',
+                belt: '<svg viewBox="0 0 24 24"><rect x="2" y="10" width="20" height="4" rx="1" fill="#5d4037"/><rect x="10" y="9" width="5" height="6" rx="1" fill="#ffd54f" stroke="#ffb300" stroke-width=".8"/><circle cx="12.5" cy="12" r="1" fill="#ff8f00"/></svg>'
+            };
+
+            var ALL_CLOTH_TYPES = Object.keys(CLOTH_SVGS);
+
+            var BUBBLE_SIZES = [8, 10, 12, 13, 14, 16, 18, 20, 22];
+
+            var MODE_COUNT = MODES.length;
+            var DEG_PER_MODE = 360 / MODE_COUNT;
+
+            var washer      = document.getElementById("washer");
+            var startPanel  = document.getElementById("startPanel");
+            var startBtn    = document.getElementById("startBtn");
+            var screen      = document.getElementById("screen");
+            var scrMode     = document.getElementById("scrMode");
+            var scrTime     = document.getElementById("scrTime");
+            var scrStatus   = document.getElementById("scrStatus");
+            var statusLed   = document.getElementById("statusLed");
+            var knobPointer = document.getElementById("knobPointer");
+            var knobCap     = document.getElementById("knobCap");
+            var knobWrap    = document.getElementById("knobWrap");
+            var bubblesLayer = document.getElementById("bubbles");
+            var clothesLayer = document.getElementById("clothesLayer");
+            var state = { on: false, index: 4, time: 30 };
+            var countdownTimer = null;
+            var audioCtx = null;
+            var audioReady = false;
+            var keepAliveOsc = null;
+            var keepAliveGain = null;
+            var dragging = false;
+            var lastIndex = state.index;
+            var knobRotationDeg = 0;
+            var drumChurnTimer = null;
+
+            function initStorage() {
+                var now = Math.floor(Date.now() / 1000);
+                var exp = localStorage.getItem("wash_expiration");
+                if (exp && parseInt(exp, 10) > now) {
+                    var idx = parseInt(localStorage.getItem("wash_index") || "4", 10);
+                    var t   = parseInt(localStorage.getItem("wash_time") || "30", 10);
+                    if (idx < 0 || idx >= MODE_COUNT) throw new Error("wash_index 无效");
+                    state.index = idx;
+                    state.time = t;
+                } else {
+                    state.index = 4;
+                    state.time = MODES[4].def;
+                }
+                localStorage.setItem("wash_expiration", String(now + 2592000));
+                clampTime();
+            }
+
+            function saveStorage() {
+                localStorage.setItem("wash_index", String(state.index));
+                localStorage.setItem("wash_time", String(state.time));
+            }
+
+            function getMode() {
+                return MODES[state.index];
+            }
+
+            function clampTime() {
+                var m = getMode();
+                if (state.time < m.min) state.time = m.min;
+                if (state.time > m.max) state.time = m.max;
+            }
+
+            function showWasher() {
+                startPanel.classList.add("hidden");
+                washer.classList.remove("hidden");
+            }
+
+            function hideWasher() {
+                if (state.on) {
+                    state.on = false;
+                    clearCountdown();
+                    saveStorage();
+                    updateUI();
+                }
+                stopAudioKeepAlive();
+                washer.classList.add("hidden");
+                startPanel.classList.remove("hidden");
+                audioReady = false;
+            }
+
+            function onAudioStateChange() {
+                if (!audioCtx) return;
+                if (audioCtx.state === "running") {
+                    audioReady = true;
+                    showWasher();
+                    startAudioKeepAlive();
+                } else if (audioCtx.state === "suspended" && audioReady) {
+                    hideWasher();
+                }
+            }
+
+            function ensureAudio() {
+                if (!audioCtx) {
+                    audioCtx = new (window.AudioContext || window.webkitAudioContext)();
+                    audioCtx.onstatechange = onAudioStateChange;
+                }
+                if (audioCtx.state === "suspended") {
+                    return audioCtx.resume();
+                }
+                return Promise.resolve();
+            }
+
+            function startAudioKeepAlive() {
+                ensureAudio();
+                if (keepAliveOsc) return;
+                keepAliveOsc = audioCtx.createOscillator();
+                keepAliveGain = audioCtx.createGain();
+                keepAliveOsc.type = "sine";
+                keepAliveOsc.frequency.value = 10;
+                keepAliveGain.gain.value = 0.025;
+                keepAliveOsc.connect(keepAliveGain);
+                keepAliveGain.connect(audioCtx.destination);
+                keepAliveOsc.start();
+            }
+
+            function stopAudioKeepAlive() {
+                if (!keepAliveOsc) return;
+                try { keepAliveOsc.stop(); } catch (e) {}
+                keepAliveOsc.disconnect();
+                keepAliveGain.disconnect();
+                keepAliveOsc = null;
+                keepAliveGain = null;
+            }
+
+            function unlockAudio() {
+                return ensureAudio().then(function () {
+                    if (audioCtx.state !== "running") {
+                        throw new Error("AudioContext 未能启动");
+                    }
+                    audioReady = true;
+                    showWasher();
+                    startAudioKeepAlive();
+                    playPower();
+                }).catch(function () {
+                    audioReady = false;
+                    hideWasher();
+                });
+            }
+
+            function playToneAt(freq, duration, type, when) {
+                if (!audioCtx) throw new Error("AudioContext 未初始化");
+                var osc = audioCtx.createOscillator();
+                var gain = audioCtx.createGain();
+                var t = when !== undefined ? when : audioCtx.currentTime;
+                osc.type = type || "sine";
+                osc.frequency.value = freq;
+                gain.gain.setValueAtTime(0.18, t);
+                gain.gain.exponentialRampToValueAtTime(0.005, t + duration);
+                osc.connect(gain);
+                gain.connect(audioCtx.destination);
+                osc.start(t);
+                osc.stop(t + duration);
+            }
+
+            function playTone(freq, duration, type) {
+                ensureAudio();
+                playToneAt(freq, duration, type);
+            }
+
+            var NOKIA_MELODY = [
+                { f: 659, d: 0.125 },
+                { f: 587, d: 0.125 },
+                { f: 370, d: 0.250 },
+                { f: 415, d: 0.250 },
+                { f: 554, d: 0.125 },
+                { f: 494, d: 0.125 },
+                { f: 294, d: 0.250 },
+                { f: 330, d: 0.250 },
+                { f: 494, d: 0.125 },
+                { f: 440, d: 0.125 },
+                { f: 277, d: 0.250 },
+                { f: 330, d: 0.250 },
+                { f: 440, d: 1.000 }
+            ];
+
+            function playNokiaMelody() {
+                ensureAudio();
+                var t = audioCtx.currentTime;
+                var i;
+                for (i = 0; i < NOKIA_MELODY.length; i++) {
+                    playToneAt(NOKIA_MELODY[i].f, NOKIA_MELODY[i].d, "square", t);
+                    t += NOKIA_MELODY[i].d;
+                }
+            }
+
+            function playMinuteBeep() {
+                playTone(988, 0.07);
+            }
+
+            function playKnobSnap(index) {
+                var freq = 220 + index * 35;
+                playTone(freq, 0.09, "triangle");
+            }
+
+            function playClick() { playTone(880, 0.06); }
+
+            function playPower() {
+                playTone(330, 0.12);
+                setTimeout(function () { playTone(495, 0.1); }, 100);
+            }
+
+            function setKnobAngle(index, animate) {
+                var target = index * DEG_PER_MODE;
+                var currentMod = ((knobRotationDeg % 360) + 360) % 360;
+                var diff = target - currentMod;
+                if (diff > 180) diff -= 360;
+                if (diff < -180) diff += 360;
+                knobRotationDeg += diff;
+                knobPointer.style.transition = animate ? "transform 0.15s ease-out" : "none";
+                knobPointer.style.transform = "rotate(" + knobRotationDeg + "deg)";
+            }
+
+            function setIndex(index, playSound, animateKnob) {
+                if (index < 0 || index >= MODE_COUNT) return;
+                if (state.on) return;
+                var changed = index !== state.index;
+                state.index = index;
+                lastIndex = index;
+                if (changed) state.time = MODES[index].def;
+                clampTime();
+                setKnobAngle(index, animateKnob !== false);
+                if (playSound && changed) playKnobSnap(index);
+                saveStorage();
+                updateUI();
+            }
+
+            function rand(min, max) {
+                return min + Math.random() * (max - min);
+            }
+
+            function randInt(min, max) {
+                return Math.floor(rand(min, max + 1));
+            }
+
+            function pickRandom(arr) {
+                return arr[randInt(0, arr.length - 1)];
+            }
+
+            function getModeClothPool(mode) {
+                if (!mode.clothes) return [];
+                if (mode.clothes === "all") return ALL_CLOTH_TYPES;
+                return mode.clothes;
+            }
+
+            function randomPointInDrum() {
+                var theta = rand(0, Math.PI * 2);
+                var r = Math.sqrt(Math.random()) * 38;
+                return {
+                    left: (50 + r * Math.cos(theta)).toFixed(1) + "%",
+                    top: (50 - r * Math.sin(theta)).toFixed(1) + "%"
+                };
+            }
+
+            function setRandomBubbleMotion(el) {
+                var dur = rand(1.6, 3.0);
+                var pt = randomPointInDrum();
+                var layerH = el.parentElement.clientHeight || 180;
+                var risePx = -rand(layerH * 0.28, layerH * 0.58);
+                el.style.setProperty("--r0", randInt(0, 359) + "deg");
+                el.style.setProperty("--r1", randInt(0, 359) + "deg");
+                el.style.setProperty("--rise", risePx + "px");
+                el.style.setProperty("--dur", dur + "s");
+                el.style.left = pt.left;
+                el.style.top = pt.top;
+                el.style.bottom = "auto";
+            }
+
+            function setRandomClothMotion(el) {
+                var dur = rand(1.8, 3.2);
+                var layer = el.parentElement;
+                var layerW = layer.clientWidth || 180;
+                var orbitPx = rand(layerW * 0.2, layerW * 0.38);
+                var a0 = randInt(0, 359);
+                var sweep = randInt(120, 300) * (Math.random() > 0.5 ? 1 : -1);
+                el.style.left = "50%";
+                el.style.top = "50%";
+                el.style.bottom = "auto";
+                el.style.setProperty("--orbit", orbitPx + "px");
+                el.style.setProperty("--a0", a0 + "deg");
+                el.style.setProperty("--a1", (a0 + sweep) + "deg");
+                el.style.setProperty("--r0", randInt(0, 359) + "deg");
+                el.style.setProperty("--r1", randInt(0, 359) + "deg");
+                el.style.setProperty("--dur", dur + "s");
+            }
+
+            function restartDrumAnim(el, animName) {
+                var dur = el.style.getPropertyValue("--dur") || "2s";
+                el.style.animation = "none";
+                void el.offsetWidth;
+                el.style.animation = animName + " " + dur + " ease-in-out forwards";
+            }
+
+            function refreshBubble(el) {
+                var size = pickRandom(BUBBLE_SIZES);
+                el.style.width = size + "px";
+                el.style.height = size + "px";
+                setRandomBubbleMotion(el);
+            }
+
+            function refreshCloth(el) {
+                var pool = getModeClothPool(getMode());
+                if (!pool.length) return;
+                applyClothSlot(el, pickRandom(pool));
+                setRandomClothMotion(el);
+            }
+
+            function respawnDrumItem(el, refreshFn, animName) {
+                el.classList.add("vanish");
+                setTimeout(function () {
+                    if (!state.on) return;
+                    el.classList.remove("vanish");
+                    refreshFn(el);
+                    restartDrumAnim(el, animName);
+                }, 120);
+            }
+
+            function initBubbleLayer() {
+                var i;
+                bubblesLayer.innerHTML = "";
+                for (i = 0; i < MAX_BUBBLE_ITEMS; i++) {
+                    bubblesLayer.appendChild(document.createElement("span"));
+                }
+            }
+
+            function tickDrumChurn() {
+                if (!state.on) return;
+                var bubbles = bubblesLayer.querySelectorAll("span");
+                var i;
+                for (i = 0; i < 2; i++) {
+                    respawnDrumItem(bubbles[randInt(0, bubbles.length - 1)], refreshBubble, "bubble-rise");
+                }
+                if (getMode().clothes) {
+                    var slots = clothesLayer.querySelectorAll(".cloth");
+                    respawnDrumItem(slots[randInt(0, MAX_DRUM_ITEMS - 1)], refreshCloth, "cloth-tumble");
+                }
+            }
+
+            function clearDrumChurn() {
+                if (drumChurnTimer) {
+                    clearTimeout(drumChurnTimer);
+                    drumChurnTimer = null;
+                }
+            }
+
+            function scheduleDrumChurn() {
+                clearDrumChurn();
+                if (!state.on) return;
+                drumChurnTimer = setTimeout(function () {
+                    tickDrumChurn();
+                    scheduleDrumChurn();
+                }, randInt(180, 450));
+            }
+
+            function startDrumChurn() {
+                scheduleDrumChurn();
+            }
+
+            function applyClothSlot(el, type) {
+                if (!CLOTH_SVGS[type]) throw new Error("未知衣物: " + type);
+                el.className = "cloth";
+                el.dataset.type = type;
+                el.innerHTML = CLOTH_SVGS[type];
+            }
+
+            function randomizeBubbles() {
+                var spans = bubblesLayer.querySelectorAll("span");
+                var i;
+                for (i = 0; i < spans.length; i++) {
+                    spans[i].classList.remove("vanish");
+                    refreshBubble(spans[i]);
+                    restartDrumAnim(spans[i], "bubble-rise");
+                }
+            }
+
+            function randomizeClothes() {
+                var pool = getModeClothPool(getMode());
+                var slots = clothesLayer.querySelectorAll(".cloth");
+                var i;
+
+                for (i = 0; i < slots.length; i++) {
+                    slots[i].hidden = true;
+                    slots[i].classList.remove("vanish");
+                }
+
+                if (!pool.length) return;
+
+                for (i = 0; i < MAX_DRUM_ITEMS; i++) {
+                    refreshCloth(slots[i]);
+                    restartDrumAnim(slots[i], "cloth-tumble");
+                    slots[i].hidden = false;
+                }
+            }
+
+            function randomizeDrumContent() {
+                randomizeBubbles();
+                randomizeClothes();
+            }
+
+            function updateClothesLayer() {
+                washer.classList.toggle("mode-clothes", !!getMode().clothes);
+            }
+
+            function updateUI() {
+                var m = getMode();
+                scrMode.textContent = m.name;
+                scrTime.innerHTML = "<b>" + state.time + "</b><small> min</small>";
+                updateClothesLayer();
+
+                if (state.on) {
+                    washer.classList.add("on");
+                    screen.classList.remove("off");
+                    screen.classList.add("on");
+                    statusLed.classList.add("on");
+                    scrStatus.textContent = "洗涤中";
+                } else {
+                    washer.classList.remove("on");
+                    clearDrumChurn();
+                    screen.classList.add("off");
+                    screen.classList.remove("on");
+                    statusLed.classList.remove("on");
+                    scrStatus.textContent = "待机 · 点击屏幕启动";
+                }
+            }
+
+            function clearCountdown() {
+                if (countdownTimer) {
+                    clearInterval(countdownTimer);
+                    countdownTimer = null;
+                }
+            }
+
+            function startCountdown() {
+                clearCountdown();
+                countdownTimer = setInterval(function () {
+                    if (!state.on) { clearCountdown(); return; }
+                    state.time -= 1;
+                    if (state.time <= 0) {
+                        state.time = 0;
+                        state.on = false;
+                        clearCountdown();
+                        clearDrumChurn();
+                        playNokiaMelody();
+                        scrStatus.textContent = "完成";
+                    } else {
+                        playMinuteBeep();
+                    }
+                    saveStorage();
+                    updateUI();
+                }, 3000);
+            }
+
+            function togglePower() {
+                if (!audioReady) return;
+                ensureAudio();
+                playPower();
+                state.on = !state.on;
+                if (state.on) {
+                    if (state.time <= 0) state.time = getMode().def;
+                    randomizeDrumContent();
+                    startDrumChurn();
+                    startCountdown();
+                } else {
+                    clearCountdown();
+                    clearDrumChurn();
+                }
+                saveStorage();
+                updateUI();
+            }
+
+            function changeTime(delta) {
+                if (state.on || !audioReady) return;
+                ensureAudio();
+                playClick();
+                var m = getMode();
+                state.time = Math.min(m.max, Math.max(m.min, state.time + delta));
+                saveStorage();
+                updateUI();
+            }
+
+            function angleToIndex(clientX, clientY) {
+                var rect = knobWrap.getBoundingClientRect();
+                var cx = rect.left + rect.width / 2;
+                var cy = rect.top + rect.height / 2;
+                var rad = Math.atan2(clientY - cy, clientX - cx);
+                var deg = rad * 180 / Math.PI + 90;
+                if (deg < 0) deg += 360;
+                if (deg >= 360) deg -= 360;
+                var bestIdx = 0;
+                var bestDist = Infinity;
+                var i;
+                for (i = 0; i < MODE_COUNT; i++) {
+                    var center = i * DEG_PER_MODE;
+                    var dist = Math.abs(deg - center);
+                    if (dist > 180) dist = 360 - dist;
+                    if (dist < bestDist) {
+                        bestDist = dist;
+                        bestIdx = i;
+                    }
+                }
+                return bestIdx;
+            }
+
+            function onKnobMove(clientX, clientY) {
+                var idx = angleToIndex(clientX, clientY);
+                if (idx !== state.index) {
+                    setIndex(idx, true, false);
+                }
+            }
+
+            knobCap.addEventListener("mousedown", function (e) {
+                if (state.on) return;
+                dragging = true;
+                ensureAudio();
+                e.preventDefault();
+            });
+
+            knobWrap.addEventListener("mousedown", function (e) {
+                if (state.on) return;
+                dragging = true;
+                ensureAudio();
+                onKnobMove(e.clientX, e.clientY);
+            });
+
+            document.addEventListener("mousemove", function (e) {
+                if (!dragging || state.on) return;
+                onKnobMove(e.clientX, e.clientY);
+            });
+
+            document.addEventListener("mouseup", function () {
+                dragging = false;
+            });
+
+            knobCap.addEventListener("touchstart", function (e) {
+                if (state.on) return;
+                dragging = true;
+                ensureAudio();
+                e.preventDefault();
+            }, { passive: false });
+
+            knobWrap.addEventListener("touchstart", function (e) {
+                if (state.on) return;
+                dragging = true;
+                ensureAudio();
+                var t = e.touches[0];
+                onKnobMove(t.clientX, t.clientY);
+            }, { passive: false });
+
+            document.addEventListener("touchmove", function (e) {
+                if (!dragging || state.on) return;
+                var t = e.touches[0];
+                onKnobMove(t.clientX, t.clientY);
+            }, { passive: true });
+
+            document.addEventListener("touchend", function () {
+                dragging = false;
+            });
+
+            knobWrap.addEventListener("wheel", function (e) {
+                if (state.on) return;
+                e.preventDefault();
+                ensureAudio();
+                var next = state.index + (e.deltaY > 0 ? 1 : -1);
+                if (next < 0) next = MODE_COUNT - 1;
+                if (next >= MODE_COUNT) next = 0;
+                setIndex(next, true);
+            }, { passive: false });
+
+            screen.addEventListener("click", togglePower);
+            document.getElementById("btnPlus").addEventListener("click", function () { changeTime(5); });
+            document.getElementById("btnMinus").addEventListener("click", function () { changeTime(-5); });
+            startBtn.addEventListener("click", unlockAudio);
+
+            document.addEventListener("visibilitychange", function () {
+                if (document.visibilityState === "visible" && audioCtx) {
+                    onAudioStateChange();
+                }
+            });
+
+            initStorage();
+            initBubbleLayer();
+            setKnobAngle(state.index, false);
+            updateUI();
+    </script>
+</body>
+</html>
